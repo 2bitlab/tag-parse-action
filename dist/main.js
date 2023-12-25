@@ -52,10 +52,12 @@ function run() {
             const topRepository = core.getInput("repository");
             const githubToken = core.getInput("githubToken");
             const type = core.getInput("type");
-            const runCommond = core.getInput("runCommond");
+            const runCommand = core.getInput("runCommand") || "";
+            const appPath = core.getInput("appPath") || "";
             console.log("topRepository:", topRepository);
             console.log("type:", type);
-            console.log("runCommond:", runCommond);
+            console.log("runCommand:", runCommand);
+            console.log("appPath:", appPath);
             if (type === "stringify") {
                 const branch = (0, utils_1.getBranchByHead)(ref) || (0, utils_1.getBranchByTag)(ref);
                 const { repository, pusher } = pushPayload || {};
@@ -65,20 +67,23 @@ function run() {
                 const syncBranch = (0, utils_1.getSyncBranch)(ref);
                 const tagUrl = (0, utils_1.getTagUrl)(topRepository || full_name);
                 const timesTamp = (0, utils_1.formatTime)(new Date(), "{yy}-{mm}-{dd}-{h}-{i}-{s}");
-                const tagName = `${outRepository}/${syncBranch}/${timesTamp}/${runCommond}`;
+                const tagName = `${outRepository}/${syncBranch}/${timesTamp}/${runCommand.replace(/\s+/g, "_")}`;
                 // `release/${timesTamp}&branch=${branch}&syncBranch=${syncBranch}&repository=${outRepository}`
                 const tagMessage = {
                     branch,
                     syncBranch,
                     repository: outRepository,
                     pusherName,
-                    runCommond,
+                    runCommand,
+                    appPath,
                 };
-                console.log("tagName: ", tagName);
+                console.log("tagName1111: ", tagName);
+                console.log("tagUrl", tagUrl);
+                console.log("body", JSON.stringify(tagMessage));
                 const ret = yield (0, axios_1.default)({
                     method: "POST",
                     headers: {
-                        Accept: "application/vnd.github.v3+json",
+                        Accept: "application/vnd.github+json",
                         "content-type": "application/json",
                         Authorization: `Bearer ${githubToken}`,
                     },
@@ -88,23 +93,25 @@ function run() {
                         body: JSON.stringify(tagMessage),
                     },
                 });
-                console.log("ret------: ", ret.data);
+                console.log("ret-------: ", ret.data);
             }
             if (type === "parse") {
                 const { release } = pushPayload || {};
                 const { body } = release || {};
                 const tagInfo = JSON.parse(body);
                 console.log("tagInfo: ", tagInfo);
-                const { branch: tagBranch, syncBranch: tagSyncBranch, repository: tagRepository, pusherName, runCommond, } = tagInfo || {};
+                const { branch: tagBranch, syncBranch: tagSyncBranch, repository: tagRepository, pusherName, } = tagInfo || {};
                 console.log("branch: ", tagSyncBranch);
                 console.log("syncBranch----", tagBranch);
                 console.log("repository----", tagRepository);
                 console.log("pusherName----", pusherName);
-                console.log("runCommond----", runCommond);
+                console.log("runCommand----", tagInfo.runCommand);
+                console.log("appPath----", tagInfo.appPath);
                 core.exportVariable("BRANCH", tagBranch);
-                core.exportVariable("syncBranch", tagSyncBranch);
+                core.exportVariable("SYNC_BRANCH", tagSyncBranch);
                 core.exportVariable("REPOSITORY", tagRepository);
-                core.exportVariable("runCommond", runCommond);
+                core.exportVariable("RUN_COMMAND", tagInfo.runCommand);
+                core.exportVariable("APP_PATH", tagInfo.appPath);
             }
         }
         catch (error) {
